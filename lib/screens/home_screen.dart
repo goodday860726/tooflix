@@ -1,148 +1,66 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:tooflix/models/webtoon.dart';
+import 'package:tooflix/services/api.service.dart';
+import 'package:tooflix/widgets/webtoon_widget.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class HomeScreen extends StatelessWidget {
+  HomeScreen({super.key});
 
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  static const twentyFiveMins = 1500;
-  int totalSeconds = twentyFiveMins;
-  bool isRunning = false;
-  int totalPomodoros = 0;
-  late Timer timer;
-
-  void onTick(Timer timer) {
-    if (totalSeconds == 0) {
-      setState(() {
-        totalPomodoros = totalPomodoros + 1;
-        isRunning = false;
-        totalSeconds = twentyFiveMins;
-      });
-      timer.cancel();
-    } else {
-      setState(() {
-        totalSeconds = totalSeconds - 1;
-      });
-    }
-  }
-
-  void onStartPressed() {
-    timer = Timer.periodic(
-      const Duration(seconds: 1),
-      onTick,
-    );
-    setState(() {
-      isRunning = true;
-    });
-  }
-
-  void onPausePressed() {
-    timer.cancel();
-    setState(() {
-      isRunning = false;
-    });
-  }
-
-  void onRestartPressed() {
-    timer.cancel();
-    setState(() {
-      isRunning = false;
-      totalSeconds = twentyFiveMins;
-    });
-  }
-
-  String format(int seconds) {
-    var duration = Duration(seconds: seconds);
-    return duration.toString().substring(2, 7);
-  }
+  final Future<List<WebToonModel>> webToons = ApiService.getTodaysToons();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).backgroundColor,
-      body: Column(
-        children: [
-          Flexible(
-            flex: 1,
-            child: Container(
-              alignment: Alignment.bottomCenter,
-              child: Text(
-                format(totalSeconds),
-                style: TextStyle(
-                  color: Theme.of(context).cardColor,
-                  fontSize: 88,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
+      appBar: AppBar(
+        elevation: 1,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.greenAccent,
+        title: const Text(
+          "오늘의 웹툰",
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
           ),
-          Flexible(
-            flex: 3,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+        ),
+      ),
+      body: FutureBuilder(
+        future: webToons,
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return Column(
               children: [
-                Center(
-                  child: IconButton(
-                    onPressed: isRunning ? onPausePressed : onStartPressed,
-                    icon: Icon(isRunning
-                        ? Icons.pause_circle_filled_outlined
-                        : Icons.play_circle_fill_outlined),
-                    iconSize: 120,
-                    color: Theme.of(context).bottomAppBarColor,
-                  ),
+                const SizedBox(
+                  height: 50,
                 ),
-                Center(
-                  child: IconButton(
-                    onPressed: onRestartPressed,
-                    icon: const Icon(Icons.restore),
-                    iconSize: 120,
-                    color: Theme.of(context).bottomAppBarColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Flexible(
-            flex: 1,
-            child: Row(
-              children: [
                 Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(50)),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Pomodoros',
-                          style: TextStyle(
-                            fontSize: 20,
-                            color: Theme.of(context).textTheme.headline1!.color,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          '$totalPomodoros',
-                          style: TextStyle(
-                            fontSize: 58,
-                            color: Theme.of(context).textTheme.headline1!.color,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                  child: makeList(snapshot),
+                )
               ],
-            ),
-          ),
-        ],
+            );
+          }
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
+      ),
+    );
+  }
+
+  ListView makeList(AsyncSnapshot<List<WebToonModel>> snapshot) {
+    return ListView.separated(
+      scrollDirection: Axis.horizontal,
+      itemCount: snapshot.data!.length,
+      padding: const EdgeInsets.symmetric(
+        vertical: 10,
+        horizontal: 20,
+      ),
+      itemBuilder: (context, index) {
+        var webToon = snapshot.data![index];
+        return WebToon(
+            title: webToon.title, thumb: webToon.thumb, id: webToon.id);
+      },
+      separatorBuilder: (context, index) => const SizedBox(
+        width: 40,
       ),
     );
   }
